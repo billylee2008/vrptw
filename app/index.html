@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>智能物流&copy;路善科技</title>
+<!--ExtJs框架开始-->
+<link rel="stylesheet" type="text/css" href="ext/resources/css/ext-all.css" />
+<script type="text/javascript" src="ext/adapter/ext/ext-base.js"></script>
+<script type="text/javascript" src="ext/ext-all.js"></script>
+<script type="text/javascript" src="ext/locale/ext-lang-zh_CN.js"></script><!--中文翻译js-->
+<!--ExtJs框架结束-->
+<link rel="stylesheet" type="text/css" href="./icons.css" />
+<style type="text/css">
+	.emplWrap {
+		border: 1px #999999 solid;
+		margin: 3px;
+		-moz-border-radius: 5px;
+		-webkit-border-radius: 5px;
+		background-color: #ffffcc;
+		padding-bottom: 3px;
+	}
+	.emplSelected {
+		border: 1px #66ff66 solid;
+		background-color: #ccffcc;
+		cursor: pointer;
+	}
+	.emplOver {
+		border: 1px #9999ff solid;
+		background-color: #ccccff;
+		cursor: pointer;
+	}
+	.emplName {
+		font-weight: bold;
+		margin-left: 5px;
+		font-size: 14px;
+		text-decoration: underline;
+		color: #333333;
+	}
+	.emplTitle {
+		margin-left: 5px;
+		font-weight: bold;
+	}
+
+/* 定义keyframe动画，命名为blink */
+@keyframes blink{
+  0%{opacity: 1;}
+  50%{opacity: 1;}
+  50.01%{opacity: 0;} /* 注意这里定义50.01%立刻透明度为０，可以设置闪烁效果 */
+  100%{opacity: 0;} 
+}
+
+/* 添加兼容性前缀 */
+
+@-webkit-keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 1; }
+    50.01% { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+@-moz-keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 1; }
+    50.01% { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+@-ms-keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 1; }
+    50.01% { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+@-o-keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 1; }
+    50.01% { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+/* 定义blink类*/
+.blink{
+    animation: blink .75s linear infinite;  
+    /* 其它浏览器兼容性前缀 */
+    -webkit-animation: blink .75s linear infinite;
+    -moz-animation: blink .75s linear infinite;
+    -ms-animation: blink .75s linear infinite;
+    -o-animation: blink .75s linear infinite;
+    color: #dd4814;
+}
+</style>
+<script type="text/javascript" src="js/login.js"></script>
+<script type="text/javascript" src="js/chartbase.js"></script>
+<script type="text/javascript" src="js/companysnapshot.js"></script>
+<script type="text/javascript" src="js/departmentbreakdown.js"></script>
+<script type="text/javascript" src="js/dashboard.js"></script>
+<script type="text/javascript" src="js/listbase.js"></script>
+<script type="text/javascript" src="js/departmentlist.js"></script>
+<script type="text/javascript" src="js/employeelist.js"></script>
+<script type="text/javascript" src="js/formbase.js"></script>
+<script type="text/javascript" src="js/employeeform.js"></script>
+<script type="text/javascript" src="js/employeemanager.js"></script>
+<script type="text/javascript" src="js/routemanager.js"></script>
+<script type="text/javascript" src="js/routesitelist.js"></script>
+<script type="text/javascript" src="js/routestatuslist.js"></script>
+<script type="text/javascript" src="js/workspace.js"></script>
+</head>
+<body>
+</body>
+</html>
