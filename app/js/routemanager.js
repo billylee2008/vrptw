@@ -346,12 +346,14 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			var store = new Ext.data.JsonStore({
 				url: '/api/site/getCenterSites',
 				root: 'data',
-				fields: [ 'name', 'code', 'abbr' ]
+				fields: [ 'name', 'code', 'abbr', 'longitude', 'latitude' ]
 			});
 			store.addListener('load', function (store, records, options) {
 				for (var i = 0; i < store.getCount(); i++) {
 					btn.menu.addMenuItem(Ext.apply(btn.menu.defaults, {
 						//text: store.getAt(i).get('name'),
+						lng: store.getAt(i).get('longitude'),
+						lat: store.getAt(i).get('latitude'),
 						text: store.getAt(i).get('abbr'),
 						siteId: store.getAt(i).get('code'),
 						btnText: store.getAt(i).get('abbr')
@@ -367,6 +369,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		if (checked === true) {
 			this.params.dc = menuItem.siteId;
 			this.params.dcText = menuItem.text;
+			this.params.lng = menuItem.lng;
+			this.params.lat = menuItem.lat;
 			Ext.getCmp('siteButton').setText(menuItem.btnText);
 			this.loadStoreByParams(this.params);
 		}
@@ -479,14 +483,17 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			loader: false,
 			dropConfig: {
 				isValidDropPoint: function (nodeData, pt, dd, evtObj, data) {
-					//var treeDropZone = Ext.tree.TreeDropZone;
-					var isValidDrpPnt = Ext.tree.TreeDropZone.prototype.isValidDropPoint;
-					if (!nodeData)
-						return false;
-					var tgtNd = nodeData.node;
-					if (!tgtNd || !tgtNd.leaf || (!tgtNd.draggable && pt === 'above'))
-						return false;
-					return isValidDrpPnt.apply(tgtNd.getOwnerTree().dropZone, arguments);
+					try {
+						//var treeDropZone = Ext.tree.TreeDropZone;
+						var isValidDrpPnt = Ext.tree.TreeDropZone.prototype.isValidDropPoint;
+						if (!nodeData)
+							return false;
+						var tgtNd = nodeData.node;
+						if (!tgtNd || !tgtNd.leaf || (!tgtNd.draggable && pt === 'above'))
+							return false;
+						return isValidDrpPnt.apply(tgtNd.getOwnerTree().dropZone, arguments);
+					} catch (e) {
+					}
 				}
 			},
 			root: new Ext.tree.TreeNode({
@@ -652,33 +659,22 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			},
 			callback: this.workspace.onAfterAjaxReq,
 			succCallback: function (result) {
-				this.downloadSolution(result.data);
+				console.log(result.data);
 				Ext.MessageBox.alert('系统提示', '方案生成成功！');
 			},
-			/*failure: function (result) {
-				Ext.getBody().unmask();
+			failure: function (result) {
 				//错误处理
 				Ext.MessageBox.show({
-					title: '提示',
+					title: '系统提示',
 					msg: result.msg,
 					buttons: Ext.MessageBox.OK,
 					icon: Ext.MessageBox.ERROR,
 					maxWidth: 500,
 					minWidth: 200
 				});
-			}*/
-			scope: this,
+			},
+			scope: this
 		});
-
-		/*if (!this.saveRouteStore)
-			this.saveRouteStore = this.buildSaveRouteStore();
-		Ext.getBody().mask('保存中...', 'x-mask-loading');
-		this.saveRouteStore.load({
-			params: {
-				routes: routes
-			}
-		}, this);*/
-		//this.downloadSolution(routes);
 	},
 	buildSaveRouteStore: function () {
 		var store = new Ext.data.JsonStore({
@@ -710,6 +706,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		var removeItem = ctxMenuRoute.getComponent('remove');
 		var valueItem = ctxMenuRoute.getComponent('value');
 		var drawItem = ctxMenuRoute.getComponent('draw');
+		var opt2Item = ctxMenuRoute.getComponent('opt2');
+		var opt3Item = ctxMenuRoute.getComponent('opt3');
 
 		if (node.leaf) {
 			renameItem.disable();
@@ -722,6 +720,13 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				removeItem.enable();
 			valueItem.enable();
 			drawItem.enable();
+			if (node.parentNode.childNodes.length < 3) {
+				opt2Item.disable();
+				opt3Item.disable();
+			} else {
+				opt2Item.enable();
+				opt3Item.enable();
+			}
 		} else {
 			renameItem.enable();
 			deleteItem.enable();
@@ -734,6 +739,13 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			} else {
 				valueItem.enable();
 				drawItem.enable();
+			}
+			if (node.childNodes.length < 3) {
+				opt2Item.disable();
+				opt3Item.disable();
+			} else {
+				opt2Item.enable();
+				opt3Item.enable();
 			}
 		}
 		ctxMenuRoute.showAt(evtObj.getXY());
@@ -776,6 +788,18 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				iconCls: 'icon-chart_line',
 				scope: this,
 				handler: this.onDrawMapMenu
+			}, '-', {
+				itemId: 'opt2',
+				text: '2-OPT',
+				iconCls: 'icon-arrow_refresh',
+				scope: this,
+				handler: this.onOptRouteMenu
+			}, {
+				itemId: 'opt3',
+				text: '3-OPT',
+				iconCls: 'icon-arrow_in',
+				scope: this,
+				handler: this.onOptRouteMenu
 			}]
 		});
 	},
@@ -878,18 +902,188 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
 		if (selectedNode.leaf)
 			selectedNode = selectedNode.parentNode;
-		console.log(selectedNode);
-		Ext.MessageBox.alert('系统提示', 'onDrawMapMenu TODO!!!');
+
+		if (!this.mapInitialized)
+			this.initMapComponent();
+
+		var cset = [];
+		var route = selectedNode.childNodes[0].attributes;
+		cset.push({
+			lng: this.params.lng,
+			lat: this.params.lat,
+			id: 0,
+			code: route.site,
+			name: route.text
+		});
+
+		for (var i = 1; i < selectedNode.childNodes.length; i++) {
+			route = selectedNode.childNodes[i].attributes;
+			cset.push({
+				lng: route.lng,
+				lat: route.lat,
+				id: i,
+				code: route.id,
+				name: route.text,
+				address: ''
+			});
+		}
+
+		var mappanel = Ext.getCmp('mappanel');
+		mappanel.buildPoints(this.buildMapStore({ data: cset }), false, true);
+	},
+	buildMapStore: function (data) {
+		return new Ext.data.Store({
+			autoLoad: true,
+			proxy: new Ext.data.MemoryProxy(data),
+			reader: new Ext.data.JsonReader({
+				root: 'data'
+			}, [ 'lng', 'lat', 'id', 'code', 'name', 'address', 'rendered', 'found', 'nameFound' ]),
+		});
+	},
+	onOptRouteMenu: function (menuItem, choice) {
+		var treePanel = Ext.getCmp('routeView');
+		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
+		if (selectedNode.leaf)
+			selectedNode = selectedNode.parentNode;
+		
+		var route = [];
+		var sites = {};
+		var node = selectedNode.childNodes[0].attributes;
+		route.push(node.site);
+		sites['s' + node.site] = node.text;
+		for (var i = 1; i < selectedNode.childNodes.length; i++) {
+			node = selectedNode.childNodes[i].attributes;
+			route.push(node.id);
+			sites['s' + node.id] = node.text;
+		}
+		route.push(selectedNode.childNodes[0].attributes.site);
+
+		//console.log(route);
+		Ext.getBody().mask('线路优化中...', 'x-mask-loading');
+		Ext.Ajax.request({
+			url: '/api/order/optRoute',
+			params: {
+				route: route,
+				mode: menuItem.itemId
+			},
+			rootText: selectedNode.attributes.text,
+			sites: sites,
+			callback: this.workspace.onAfterAjaxReq,
+			succCallback: function (result, options) {
+				//console.log(result);
+				//Ext.MessageBox.alert('系统提示', '线路优化成功！');
+				if (result.success)
+					this.buildOptResultWindow(result.data, options.rootText, options.sites);
+				else if (options.failure)
+					options.failure.call(options.scope, result, options);
+			},
+			failure: function (result) {
+				Ext.getBody().unmask();
+				//错误处理
+				Ext.MessageBox.show({
+					title: '提示',
+					msg: result.msg || '当前线路已最优',
+					buttons: Ext.MessageBox.OK,
+					icon: Ext.MessageBox.ERROR,
+					maxWidth: 500,
+					minWidth: 200
+				});
+			},
+			scope: this
+		});
+	},
+	buildOptResultWindow: function (data, text, sites) {
+		var children = [];
+		for (var i = 0; i < data.length; i++) {
+			if (i < data.length - 1 || data[0] !== data[i]) {
+				children.push({
+					leaf: true,
+					text: sites['s' + data[i]]
+				});
+			}
+		}
+
+		new Ext.Window({
+			height: 350,
+			width: 200,
+			layout: 'fit',
+			border: false,
+			title: '线路优化建议',
+			id: 'frmOptRoute',
+			closeAction: 'close',
+			autoScroll: true,
+			resizable: true,
+			shadow: false,
+			modal: true,
+			closable: false,
+			animCollapse: true,
+			data: data,
+			buttons: [{
+				text: '接受',
+				scope: this,
+				handler: this.refreshRoute
+			}, {
+				text: '关闭',
+				handler: function () {
+					Ext.getCmp('frmOptRoute').close();
+				}
+			}],
+			items: {
+				xtype: 'treepanel',
+				autoScroll: true,
+				root: {
+					text: text,
+					expanded: true,
+					children: children
+				}
+			}
+		}).show();
+	},
+	refreshRoute: function () {
+		console.log('refreshRoute: ' + Ext.getCmp('frmOptRoute').data);
+		Ext.getCmp('frmOptRoute').close();
 	},
 	buildMapPanel: function () {
 		return {
-			xtype: 'panel',
+			xtype: 'mappanel',
 			flex: 1,
+			id: 'mappanel',
 			border: false,
+			draggable: false,
 			tbar: [ '线路图', '->', {
-				iconCls: 'icon-flag_green'
-			}]
+				iconCls: 'icon-flag_green',
+				scope: this,
+				handler: this.initMapComponent
+			}],
+			layout: 'fit',
+			items: {
+				html: '<div id="myMap"></div>'
+			}
 		};
+	},
+	initMapComponent: function () {
+		if (this.params.dc === '') {
+			Ext.MessageBox.show({
+				title: 'Error',
+				msg: '请选择发货点!',
+				buttons: Ext.MessageBox.OK,
+				icon: Ext.MessageBox.WARNING
+			});
+		} else {
+			if (!this.mapRoute)
+				this.mapRoute = new BMap.Map("myMap");
+			var map = this.mapRoute;
+			map.enableScrollWheelZoom(true);
+			map.addControl(new BMap.OverviewMapControl({ isOpen: false, anchor: BMAP_ANCHOR_BOTTOM_RIGHT }));
+			map.addControl(new BMap.NavigationControl());
+			map.addControl(new BMap.ScaleControl());
+			map.centerAndZoom(new BMap.Point(this.params.lng, this.params.lat), 10);
+			//map.setCurrentCity("苏州");
+			map.clearOverlays();
+			this.mapInitialized = true;
+			var mappanel = Ext.getCmp('mappanel');
+			mappanel.map = map;
+		}
 	},
 	getView: function () {
 		return Ext.getCmp('orderView');

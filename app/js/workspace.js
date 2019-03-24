@@ -167,14 +167,17 @@ VrpSolver.workspace = function () {
 				var jsonData;
 				try {
 					jsonData = Ext.decode(result.responseText);
-					console.log("jsonData");
-					console.log(jsonData);
+					//console.log("jsonData");
+					//console.log(jsonData);
 				} catch (e) {
 					Ext.MessageBox.alert('Error!', 'Data returned is not valid!');
 				}
 				options.succCallback.call(options.scope, jsonData, options);
 			} else {
-				Ext.MessageBox.alert('Error!', 'The web transaction failed!');
+				if (options.failure)
+					options.failure.call(options.scope, jsonData, options);
+				else
+					Ext.MessageBox.alert('Error!', 'The web transaction failed!');
 			}
 		},
 		destroy: function () {
