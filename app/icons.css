@@ -5,6 +5,9 @@
 	background-image: url(icons/add.png) !important;
 }
 .icon-door_out {
+	background-image: url(icons/door_in.png) !important;
+}
+.icon-door_in {
 	background-image: url(icons/door_out.png) !important;
 }
 .icon-chart_curve {
@@ -88,9 +91,6 @@
 .icon-arrow_undo {
 	background-image: url(icons/arrow_undo.png) !important;
 }
-.icon-vector_add {
-	background-image: url(icons/vector_add.png) !important;
-}
 .icon-car_delete {
 	background-image: url(icons/car_delete.png) !important;
 }
@@ -129,4 +129,28 @@
 }
 .icon-arrow_refresh {
 	background-image: url(icons/arrow_refresh.png) !important;
+}
+.icon-table_add {
+	background-image: url(icons/table_add.png) !important;
+}
+.icon-table_delete {
+	background-image: url(icons/table_delete.png) !important;
+}
+.icon-vector_add {
+	background-image: url(icons/vector_add.png) !important;
+}
+.icon-vector_delete {
+	background-image: url(icons/vector_delete.png) !important;
+}
+.icon-world {
+	background-image: url(icons/world.png) !important;
+}
+.icon-world_add {
+	background-image: url(icons/world_add.png) !important;
+}
+.icon-world_delete {
+	background-image: url(icons/world_delete.png) !important;
+}
+.icon-table_save {
+	background-image: url(icons/table_save.png) !important;
 }
