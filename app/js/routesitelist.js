@@ -109,6 +109,7 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 		record[0] = this.text || '本线路';
 		record[1] = 9;
 		record[6] = lastRecord[6];
+		record[6] = this.formatTime(btime, true);
 		record[4] = this.formatDecimal(totalVolumn, 3, true);
 		record[10] = this.formatDecimal(totalLoad, 3, true);
 		arrayData[0] = record;
@@ -124,10 +125,11 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 		});
 		return arrayStore;
 	},
-	formatTime: function (totalMinutes) {
+	formatTime: function (totalMinutes, twoParts) {
+		twoParts = twoParts || false;
 		var hours = '00' + Math.floor(totalMinutes / 60);
 		var minutes = '00' + (totalMinutes - hours * 60);
-		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2);
+		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2) + (twoParts ? ('(' + totalMinutes + ')') : '');
 	},
 	formatDecimal: function (decimal, digits, full, fn) {
 		digits = digits || 0;

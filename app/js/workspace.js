@@ -42,39 +42,40 @@ VrpSolver.workspace = function () {
 		buildViewport: function () {
 			cardPanel = new Ext.Panel({
 				layout: 'card',
-				activeItem: 2,
+				activeItem: 0,
 				border: false,
 				defaults: { workspace: this },
 				items: [{
-					xtype: 'dashboard'
+					xtype: 'routemanager'
 				}, {
 					xtype: 'employeemanager'
 				}, {
-					xtype: 'routemanager'
+					xtype: 'dashboard'
 				}],
 				tbar: [{
-					text: '控制仓',
-					iconCls: 'icon-chart_curve',
-					itemType: 'dashboard',
-					toggleGroup: 'navGrp',
-					enableToggle: true,
-					handler: this.onSwitchPanel,
-					scope: this
-				}, '-', {
-					text: '基础数据',
-					iconCls: 'icon-user_edit',
-					itemType: 'employeemanager',
-					toggleGroup: 'navGrp',
-					enableToggle: true,
-					handler: this.onSwitchPanel,
-					scope: this
-				}, '-', {
 					text: '线路规划',
 					iconCls: 'icon-vector_add',
 					itemType: 'routemanager',
 					toggleGroup: 'navGrp',
 					enableToggle: true,
 					pressed: true,
+					handler: this.onSwitchPanel,
+					scope: this
+				}, '-', {
+					text: '基础数据',
+					//iconCls: 'icon-user_edit',
+					iconCls: 'icon-script_gear',
+					itemType: 'employeemanager',
+					toggleGroup: 'navGrp',
+					enableToggle: true,
+					handler: this.onSwitchPanel,
+					scope: this
+				}, '-', {
+					text: '控制仓',
+					iconCls: 'icon-chart_curve',
+					itemType: 'dashboard',
+					toggleGroup: 'navGrp',
+					enableToggle: true,
 					handler: this.onSwitchPanel,
 					scope: this
 				}, '->', {
@@ -167,8 +168,8 @@ VrpSolver.workspace = function () {
 				var jsonData;
 				try {
 					jsonData = Ext.decode(result.responseText);
-					//console.log("jsonData");
-					//console.log(jsonData);
+					console.log("jsonData");
+					console.log(jsonData);
 				} catch (e) {
 					Ext.MessageBox.alert('Error!', 'Data returned is not valid!');
 				}

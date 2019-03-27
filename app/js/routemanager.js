@@ -28,7 +28,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			}, '->', {
 				//text: '车型确认',
 				tooltip: '车型确认',
-				iconCls: 'icon-script_gear',
+				//iconCls: 'icon-script_gear',
+				iconCls: 'icon-car',
 				scope: this,
 				handler: this.onClickVehicleButton
 			}, {
@@ -138,7 +139,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				}],
 				xtype: 'treepanel',
 				checkModel: 'single',
-				id: 'orderView',
+				id: 'orderPanel',
 				//ddGroup: 'siteDDGroup',
 				autoScroll: true,
 				rootVisible : false,
@@ -174,7 +175,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		var form = this.vehicleForm;
 		form.on({
 			scope: this,
-			render: {
+			show: {
 				single: true,
 				fn: function () {
 					form.items.items[0].getForm().load({
@@ -195,10 +196,11 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	buildVehicleForm: function () {
 		return new Ext.Window({
 			id: 'frmVehicle',
+			layout: 'fit',
 			title: '车型信息',
 			plain: true,
 			width: 330,
-			height: 170,
+			height: 265,
 			resizable: false,
 			shadow: true,
 			modal: true,
@@ -218,7 +220,6 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 					fieldLabel: '最大装载体积(立方米)',
 					width: 120,
 					allowBlank: false,
-					//readOnly: true,
 					allowDecimals: true,
 					decimalPrecision: 2,
 					style: 'text-align: right;',
@@ -227,7 +228,6 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 					fieldLabel: '最大装载重量(吨)',
 					width: 120,
 					allowBlank: false,
-					//readOnly: true,
 					allowDecimals: true,
 					decimalPrecision: 2,
 					style: 'text-align: right;',
@@ -236,11 +236,31 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 					fieldLabel: '满载率',
 					width: 120,
 					allowBlank: false,
-					//readOnly: true,
 					allowDecimals: true,
 					decimalPrecision: 2,
 					style: 'text-align: right;',
 					name: 'ratio'
+				}, {
+					fieldLabel: '站点装货时间(分)',
+					width: 120,
+					allowBlank: true,
+					allowDecimals: false,
+					style: 'text-align: right;',
+					name: 'pickup'
+				}, {
+					fieldLabel: '站点卸货时间(分)',
+					width: 120,
+					allowBlank: true,
+					allowDecimals: false,
+					style: 'text-align: right;',
+					name: 'unload'
+				}, {
+					fieldLabel: '运行时间限制(分)',
+					width: 120,
+					allowBlank: true,
+					allowDecimals: false,
+					style: 'text-align: right;',
+					name: 'runlimit'
 				}, {
 					xtype: 'textfield',
 					name: 'id',
@@ -261,8 +281,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 								scope: this,
 								success: function () {
 									Ext.getBody().unmask();
+									this.params.vehicle = form.getValues();
 									Ext.getCmp('frmVehicle').hide();
-									this.params.vehicle = Ext.apply(this.params.vehicle, form.getValues());
 									Ext.MessageBox.alert('系统提示', '保存成功。');
 								},
 								failure: function () {
@@ -278,7 +298,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 						Ext.getCmp('frmVehicle').getComponent(0).getForm().reset();
 					}
 				}, {
-					tooltip: 'tooltip test',
+					//tooltip: 'tooltip test',
 					text: '关闭',
 					handler: function () {
 						var form = Ext.getCmp('frmVehicle').getComponent(0).getForm();
@@ -296,9 +316,19 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			}
 		});
 	},
+	countOrder: function () {
+		var i = 0, count = this.getOrderPanel().root.childNodes.length;
+		var rootRoute = this.getRoutePanel().root;
+
+		for (; i < rootRoute.childNodes.length; i++)
+			count += (rootRoute.childNodes[i].length - 1);
+
+		//console.log(count);
+		return count;
+	},
 	onClickPlanButton: function (evt, toolEl, panel) {
-		view = this.getView();
-		console.log(view);
+		view = this.getOrderPanel();
+		/*console.log(view);
 		view.sort = function (a, b) {
 			console.log(a);
 			console.log(b);
@@ -318,9 +348,10 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			property: 'id',
 			dir: 'ASC'
 		});
-		console.log(sorter);
+		console.log(sorter);*/
 		//sorter.doSort();
-		if (Ext.getCmp('orderView').root.childNodes.length <= 0) {
+
+		if (this.countOrder() <= 0) {
 			Ext.MessageBox.show({
 				title: 'Error',
 				msg: '当前没有订单!',
@@ -330,8 +361,67 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			return;
 		}
 
-		this.clearRoute();
-		Ext.MessageBox.alert('系统提示', '敬请期待!!!');
+		this.clearRoute(true);
+		var route = [];
+		var root = view.root;
+		for (var i = 0; i < root.childNodes.length; i++)
+			if (root.childNodes[i].draggable)
+				route.push(root.childNodes[i].attributes.id);
+		//console.log(route);
+
+		Ext.getBody().mask('方案生成中...', 'x-mask-loading');
+		Ext.Ajax.request({
+			url: '/api/order/planRouteBySites',
+			params: {
+				dldate: this.params.dldate,
+				dc: this.params.dc,
+				orderSites: route
+			},
+			callback: this.workspace.onAfterAjaxReq,
+			succCallback: function (result) {
+				//console.log(result.data);
+				this.planRoutes(result.data);
+				Ext.MessageBox.alert('系统提示', '方案生成成功！');
+			},
+			failure: function (result) {
+				//错误处理
+				Ext.MessageBox.show({
+					title: '系统提示',
+					msg: result.msg || '方案生成失败',
+					buttons: Ext.MessageBox.OK,
+					icon: Ext.MessageBox.ERROR,
+					maxWidth: 500,
+					minWidth: 200
+				});
+			},
+			scope: this
+		});
+	},
+	planRoutes: function (data) {
+		var routes = data.routes;
+		var count = routes ? routes.length : 0;
+		if (count <= 0)
+			return;
+
+		var i, j, nodes = {};
+		var rootSite = this.getOrderPanel().root;
+		for (i = 0; i < rootSite.childNodes.length; i++)
+			nodes['s' + rootSite.childNodes[i].attributes.id] = rootSite.childNodes[i];
+		//console.log(nodes);
+
+		var rootRoute = this.getRoutePanel().root;
+		for (i = 0; i < count; i++) {
+			this.addNewRoute('系统规划线路' + (i + 1));
+			for (j = 0; j < routes[i].length; j++) {
+				var child = nodes['s' + routes[i][j]];
+				child.remove();
+				child.ui.rendered = false;
+				rootSite.removeChild(child);
+				rootRoute.lastChild.appendChild(child);
+			}
+		}
+		//this.getOrderPanel().getUpdater().refresh();
+		this.getRoutePanel().getUpdater().refresh();
 	},
 	onTimeContrainMenu: function () {
 		
@@ -415,7 +505,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	},
 	onCtxMenuOrder: function (node, evtObj) {
 		node.select();
-		this.params.view = 'orderView';
+		this.params.view = 'orderPanel';
 		evtObj.stopEvent();
 		if (!this.ctxMenuOrder)
 			this.ctxMenuOrder = this.buildCtxMenuOrder();
@@ -472,7 +562,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			xtype: 'treepanel',
 			checkModel: 'single',
 			width: 200,
-			id: 'routeView',
+			id: 'routePanel',
 			border: false,
 			style: 'border-right: 1px solid #99BBE8;',
 			autoScroll: true,
@@ -529,7 +619,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		};
 	},
 	onClickAddRouteButton: function () {
-		if (Ext.getCmp('orderView').root.childNodes.length <= 0) {
+		if (this.countOrder() <= 0) {
 			Ext.MessageBox.show({
 				title: 'Error',
 				msg: '当前没有订单!',
@@ -539,32 +629,35 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			return;
 		}
 
-		Ext.MessageBox.prompt("系统提示", "请输入线路名：", function (btn, txt) {
+		Ext.MessageBox.prompt("系统提示", "请输入线路名：", function (btn, text) {
 			if (btn !== 'ok')
 				return;
-			txt = (txt || '').trim();
-			if (txt === '')
-				txt = '新线路';
-			var view = Ext.getCmp('routeView');
-			view.root.appendChild(new Ext.tree.TreeNode({
-				id: Ext.id(),
-				expanded: true,
-				//dropable: false,
-				draggable: false,
-				leaf: false,
-				text: txt
-			}));
-			view.root.lastChild.appendChild(new Ext.tree.TreeNode({
-				id: Ext.id(),
-				draggable: false,
-				leaf: true,
-				site: this.params.dc,
-				text: this.params.dcText
-			}));
+			text = (text || '').trim();
+			if (text === '')
+				text = '新线路';
+			this.addNewRoute(text);
 		}, this);
 	},
+	addNewRoute: function (text) {
+		var view = this.getRoutePanel();
+		view.root.appendChild(new Ext.tree.TreeNode({
+			id: Ext.id(),
+			expanded: true,
+			//dropable: false,
+			draggable: false,
+			leaf: false,
+			text: text
+		}));
+		view.root.lastChild.appendChild(new Ext.tree.TreeNode({
+			id: Ext.id(),
+			draggable: false,
+			leaf: true,
+			site: this.params.dc,
+			text: this.params.dcText
+		}));
+	},
 	onClickStatusButton: function () {
-		var root = Ext.getCmp('routeView').root;
+		var root = this.getRoutePanel().root;
 		var count = root.childNodes.length;
 		var routes = [];
 		var sites = [];
@@ -600,11 +693,15 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		if (!this.totalStatusStore)
 			this.totalStatusStore = this.buildTotalStatusStore();
 		Ext.getBody().mask('计算中...', 'x-mask-loading');
+		if (this.params.vehicle) {
+			this.params.siteLoad = this.params.vehicle.pickup;
+			this.params.siteUnload = this.params.vehicle.unload;
+		}
 		this.totalStatusStore.load({
 			sites: sites,
 			params: {
-				siteLoad: this.params.siteLoad || 30,
-				siteUnload: this.params.siteUnload || 10,
+				siteLoad: this.params.siteLoad || 0,
+				siteUnload: this.params.siteUnload || 20,
 				routes: routes
 			}
 		}, this);
@@ -634,7 +731,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		return store;
 	},
 	onClickSaveButton: function () {
-		var root = Ext.getCmp('routeView').root;
+		var root = this.getRoutePanel().root;
 		var count = root.childNodes.length;
 		var route, routes = [];
 
@@ -659,7 +756,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			},
 			callback: this.workspace.onAfterAjaxReq,
 			succCallback: function (result) {
-				console.log(result.data);
+				//console.log(result.data);
 				Ext.MessageBox.alert('系统提示', '方案生成成功！');
 			},
 			failure: function (result) {
@@ -676,7 +773,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			scope: this
 		});
 	},
-	buildSaveRouteStore: function () {
+	/*buildSaveRouteStore: function () {
 		var store = new Ext.data.JsonStore({
 			url: '/api/cost/saveRoutes',
 			root: 'data',
@@ -688,10 +785,10 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			Ext.MessageBox.alert('系统提示', '线路方案保存成功！');
 		}, this);
 		return store;
-	},
+	},*/
 	onCtxMenuRoute: function (node, evtObj) {
 		node.select();
-		this.params.view = 'routeView';
+		this.params.view = 'routePanel';
 		evtObj.stopEvent();
 		if ((node.attributes.site || '') === this.params.dc)
 			return;
@@ -804,8 +901,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		});
 	},
 	onRenameRouteMenu: function () {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
+		var selectedNode = this.findSelectedRouteNode();
 		Ext.MessageBox.prompt("系统提示", "请输入线路名：", function (btn, txt) {
 			txt = (txt || '').trim();
 			if (txt !== '') {
@@ -814,46 +910,46 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		}, this);
 	},
 	onDeleteRouteMenu: function () {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
+		var selectedNode = this.findSelectedRouteNode();
 		Ext.MessageBox.confirm('系统提示', '确定要删除该线路吗？', function (btn) {
 			if (btn === 'yes') {
-				var view = this.getView();
-				var isFirst = true;
-				var lastChild = null;
-				for (var i = selectedNode.childNodes.length - 1; i > 0; i--) {
-					var child = selectedNode.childNodes[i];
-					child.ui.rendered = false;
-					selectedNode.removeChild(child);
-					if (isFirst) {
-						isFirst = false;
-						view.getRootNode().appendChild(child);
-					} else {
-						view.getRootNode().insertBefore(child, lastChild);
-					}
-					lastChild = child;
-				}
-				selectedNode.removeChild(selectedNode.childNodes[0]);
-				selectedNode.remove();
-				view.getUpdater().refresh();
+				this.deleteRoute(selectedNode);
 			}
 		}, this);
 	},
+	deleteRoute: function (selectedNode) {
+		var view = this.getOrderPanel();
+		var isFirst = true;
+		var lastChild = null;
+		for (var i = selectedNode.childNodes.length - 1; i > 0; i--) {
+			var child = selectedNode.childNodes[i];
+			child.ui.rendered = false;
+			selectedNode.removeChild(child);
+			if (isFirst) {
+				isFirst = false;
+				view.getRootNode().appendChild(child);
+			} else {
+				view.getRootNode().insertBefore(child, lastChild);
+			}
+			lastChild = child;
+		}
+		selectedNode.removeChild(selectedNode.childNodes[0]);
+		selectedNode.remove();
+		view.getUpdater().refresh();
+	},
 	onRemoveOrderMenu: function () {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
+		var selectedNode = this.findSelectedRouteNode();
 		var parentNode = selectedNode.parentNode;
+
 		selectedNode.remove();
 		selectedNode.ui.rendered = false;
-		var view = this.getView();
+		var view = this.getOrderPanel();
 		view.getRootNode().appendChild(selectedNode);
 		view.getUpdater().refresh();
 	},
 	onStatusRouteMenu: function () {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
-		if (selectedNode.leaf)
-			selectedNode = selectedNode.parentNode;
+		var selectedNode = this.findSelectedRouteNode(true);
+
 		var route = selectedNode.childNodes[0].attributes.site;
 		var sites = [];
 		sites.push(selectedNode.childNodes[0].attributes);
@@ -890,21 +986,23 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				});
 			}
 			Ext.getBody().unmask();
+			if (this.params.vehicle) {
+				this.params.siteLoad = this.params.vehicle.pickup;
+				this.params.siteUnload = this.params.vehicle.unload;
+			}
 			this.showRouteStatus('routesitelist', rawData, options.text, {
-				siteLoad: this.params.siteLoad || 30,
-				siteUnload: this.params.siteUnload || 10
+				siteLoad: this.params.siteLoad || 0,
+				siteUnload: this.params.siteUnload || 20
 			});
 		}, this);
 		return store;
 	},
 	onDrawMapMenu: function () {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
-		if (selectedNode.leaf)
-			selectedNode = selectedNode.parentNode;
+		var selectedNode = this.findSelectedRouteNode(true);
 
 		if (!this.mapInitialized)
 			this.initMapComponent();
+		this.setMapRouteName(selectedNode.attributes.text);
 
 		var cset = [];
 		var route = selectedNode.childNodes[0].attributes;
@@ -928,8 +1026,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			});
 		}
 
-		var mappanel = Ext.getCmp('mappanel');
-		mappanel.buildPoints(this.buildMapStore({ data: cset }), false, true);
+		var mapPanel = this.getMapPanel();
+		mapPanel.buildPoints(this.buildMapStore({ data: cset }), false, true);
 	},
 	buildMapStore: function (data) {
 		return new Ext.data.Store({
@@ -941,11 +1039,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		});
 	},
 	onOptRouteMenu: function (menuItem, choice) {
-		var treePanel = Ext.getCmp('routeView');
-		var selectedNode = treePanel.getSelectionModel().getSelectedNode();
-		if (selectedNode.leaf)
-			selectedNode = selectedNode.parentNode;
-		
+		var selectedNode = this.findSelectedRouteNode(true);
+
 		var route = [];
 		var sites = {};
 		var node = selectedNode.childNodes[0].attributes;
@@ -1021,7 +1116,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			buttons: [{
 				text: '接受',
 				scope: this,
-				handler: this.refreshRoute
+				handler: this.onClickAcceptButton
 			}, {
 				text: '关闭',
 				handler: function () {
@@ -1039,15 +1134,38 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			}
 		}).show();
 	},
-	refreshRoute: function () {
-		console.log('refreshRoute: ' + Ext.getCmp('frmOptRoute').data);
+	onClickAcceptButton: function () {
+		var data = Ext.getCmp('frmOptRoute').data;
 		Ext.getCmp('frmOptRoute').close();
+		this.replaceRouteNode(data);
+	},
+	replaceRouteNode: function (data) {
+		var selectedNode = this.findSelectedRouteNode(true);
+		var nodes = {};
+		for (var i = selectedNode.childNodes.length - 1; i > 0; i--) {
+			var child = selectedNode.childNodes[i];
+			nodes['s' + child.attributes.id] = child;
+			child.remove();
+			child.ui.rendered = false;
+			selectedNode.removeChild(child);
+		}
+		for (var i = 1; i < data.length - 1; i++)
+			selectedNode.appendChild(nodes['s' + data[i]]);
+		this.getRoutePanel().getUpdater().refresh();
+	},
+	findSelectedRouteNode: function (noLeaf) {
+		var routePanel = this.getRoutePanel();
+		var selectedNode = routePanel.getSelectionModel().getSelectedNode();
+		if (noLeaf)
+			if (selectedNode.leaf)
+				selectedNode = selectedNode.parentNode;
+		return selectedNode;
 	},
 	buildMapPanel: function () {
 		return {
 			xtype: 'mappanel',
 			flex: 1,
-			id: 'mappanel',
+			id: 'mapPanel',
 			border: false,
 			draggable: false,
 			tbar: [ '线路图', '->', {
@@ -1060,6 +1178,14 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				html: '<div id="myMap"></div>'
 			}
 		};
+	},
+	setMapRouteName: function (text) {
+		var view = this.getMapPanel();
+		var title = view.topToolbar.getComponent(0).autoEl.html;
+		title = title.substring(0, 3);
+		if (text)
+			title += ' - ' + text;
+		view.topToolbar.getComponent(0).setText(title);
 	},
 	initMapComponent: function () {
 		if (this.params.dc === '') {
@@ -1081,24 +1207,32 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			//map.setCurrentCity("苏州");
 			map.clearOverlays();
 			this.mapInitialized = true;
-			var mappanel = Ext.getCmp('mappanel');
-			mappanel.map = map;
+			var mapPanel = this.getMapPanel();
+			mapPanel.map = map;
+			mapPanel.addCenterMarker(this.params.lng, this.params.lat, this.params.dcText);
+			this.setMapRouteName();
 		}
 	},
-	getView: function () {
-		return Ext.getCmp('orderView');
+	getOrderPanel: function () {
+		return Ext.getCmp('orderPanel');
+	},
+	getRoutePanel: function () {
+		return Ext.getCmp('routePanel');
+	},
+	getMapPanel: function () {
+		return Ext.getCmp('mapPanel');
 	},
 	getStore: function () {
-		return this.getView().store;
+		return this.getOrderPanel().store;
 	},
-	getLoader: function () {
-		return this.getView().getLoader();
+	getOrderLoader: function () {
+		return this.getOrderPanel().getLoader();
 	},
 	getSelectedRecords: function () {
-		return this.getView().getSelectedRecords();
+		return this.getOrderPanel().getSelectedRecords();
 	},
 	getSelected: function () {
-		return this.getView().getSelectedRecords()[0];
+		return this.getOrderPanel().getSelectedRecords()[0];
 	},
 	loadStoreByParams: function (params) {
 		params = params || {};
@@ -1106,14 +1240,14 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			return;
 		if (params.dldate === '' || params.dc === '')
 			return;
-		var loader = this.getLoader();
-		loader.on('beforeload', function (loader, node) {
+		var orderLoader = this.getOrderLoader();
+		orderLoader.on('beforeload', function (orderLoader, node) {
 			this.baseParams.dldate = params.dldate;
 			this.baseParams.dc = params.dc;
 		});
 		Ext.getBody().mask('数据装载中...', 'x-mask-loading');
-		loader.load(this.getView().root, function () {
-			var view = this.getView();
+		orderLoader.load(this.getOrderPanel().root, function () {
+			var view = this.getOrderPanel();
 			var count = view.root.childNodes.length;
 			var title = view.topToolbar.getComponent(0).autoEl.html;
 			title = title.substring(0, 4);
@@ -1122,16 +1256,19 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			view.topToolbar.getComponent(0).setText(title);
 			this.clearRoute();
 			view.root.setText(this.params.dcText);
-			//view.rootVisible = true;
-			//view.getUpdater().refresh();
 			Ext.getBody().unmask();
 		}, this);
-		this.getView().expandAll();
+		this.getOrderPanel().expandAll();
 	},
-	clearRoute: function () {
-		var root = Ext.getCmp('routeView').root;
-		while (root.childNodes.length > 0)
-			root.removeChild(root.firstChild);
+	clearRoute: function (backup) {
+		var root = this.getRoutePanel().root;
+		if (!backup) {
+			while (root.childNodes.length > 0)
+				root.removeChild(root.firstChild);
+		} else {
+			for (var i = root.childNodes.length - 1; i >= 0; i--)
+				this.deleteRoute(root.childNodes[i]);
+		}
 	},
 	showRouteStatus: function (xtype, rawData, text, options) {
 		var form = this.buildRouteStatusWindow(xtype, rawData, text, options);

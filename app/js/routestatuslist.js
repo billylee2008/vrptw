@@ -101,7 +101,7 @@ LSH.form.RouteStatusList = Ext.extend(Ext.DataView, {
 	formatTime: function (totalMinutes) {
 		var hours = '00' + Math.floor(totalMinutes / 60);
 		var minutes = '00' + (totalMinutes - hours * 60);
-		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2);
+		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2) + '(' + totalMinutes + ')';
 	},
 	formatDecimal: function (decimal, digits, full, fn) {
 		digits = digits || 0;

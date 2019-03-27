@@ -1,9 +1,9 @@
 Ext.ns('VrpSolver');
 VrpSolver.EmployeeManager = Ext.extend(Ext.Panel, {
 	border: false,
-	layout: {
-		type: 'hbox',
-		align: 'stretch'
+	layout: 'border',
+	defaults: {
+		split: true
 	},
 	msgs: {
 		immediateChanges: 'Warning! Changes are <span style="color: red;">immediate</span>.',
@@ -20,178 +20,287 @@ VrpSolver.EmployeeManager = Ext.extend(Ext.Panel, {
 	},
 	initComponent: function () {
 		this.items = [
-			this.buildDepartmentListView(),
-			this.buildEmployeeListView(),
-			this.buildEmployeeForm()
+			this.buildSiteListView(), {
+				region: 'center',
+				border: false,
+				layout: 'border',
+				defaults: {
+					split: true
+				},
+				items: [
+					this.buildCostListView(),
+					this.buildOrderListView()
+				]
+			}
 		];
 		VrpSolver.EmployeeManager.superclass.initComponent.call(this);
 	},
-	buildDepartmentListView: function () {
+	buildSiteListView: function () {
 		return {
-			xtype: 'departmentlist',
-			itemId: 'departmentList',
-			width: 190,
+			region: 'west',
+			xtype: 'sitelist',
+			id: 'siteList',
+			width: 420,
 			border: false,
 			style: 'border-right: 1px solid #99BBE8;',
-			title: 'Departments',
-			listeners: {
-				click: this.onDepartmentListClick,
-				scope: this
-			}
-		};
-	},
-	buildEmployeeListView: function () {
-		return {
-			xtype: 'employeelist',
-			itemId: 'employeeList',
-			width: 190,
-			border: false,
-			style: 'border-right: 1px solid #99BBE8;',
-			title: 'Employees',
-			listeners: {
-				click: this.onEmployeeListClick,
-				scope: this
-			}
-		};
-	},
-	buildEmployeeForm: function () {
-		return {
-			xtype: 'employeeform',
-			itemId: 'employeeForm',
-			flex: 1,
-			border: false,
-			listeners: {
-				newemp: this.onNewEmployee,
-				delemp: this.onDeleteEmployee,
-				savemp: this.onSaveEmployee,
-				scope: this
-			}
-		};
-	},
-	onDepartmentListClick: function () {
-		var selectedDepartment = this.getComponent('departmentList').getSelected();
-		this.getComponent('employeeList').loadStoreByParams({
-			id: selectedDepartment.get('id')
-		});
-		this.getComponent('employeeForm').clearForm();
-		this.setDeptIdOnForm(selectedDepartment);
-	},
-	setDeptIdOnForm: function (selectedDepartment) {
-		
-	},
-	onEmployeeListClick: function () {
-		var record = this.getComponent('employeeList').getSelected();
-		var msg = String.format(this.msgs.fetchingDataFor, record.get('lastName'), record.get('firstName'));
-		Ext.getBody().mask(msg, 'x-mask-loading');
-		this.getComponent('employeeForm').load({
-			url: '/api/emp/get',
-			success: this.clearMask,
-			failure: this.onEmployFormLoadFailure,
-			params: {
-				id: record.get('id')
-			},
-			scope: this
-		});
-	},
-	onEmployFormLoadFailure: function () {
-		var record = this.getComponent('employeeList').getSelected();
-		var msg = String.format(this.msgs.couldNotLoadData, record.get('lastName'), record.get('firstName'));
-		Ext.MessageBox.show({
-			title: 'Error',
-			msg: msg,
-			buttons: Ext.MessageBox.OK,
-			icon: Ext.MessageBox.WARNING
-		});
-		this.clearMask();
-	},
-	onNewEmployee: function (selectedDepartment) {
-		var record = this.getComponent('employeeList').clearSelections();
-		this.prepareFormForNew();
-	},
-	onDeleteEmployee: function (formPanel, vals) {
-		var msg = String.format(this.msgs.deleteEmpComfirm, vals.lastName, vals.firstName);
-		Ext.MessageBox.alert(this.msgs.immediateChanges, msg, this.onConfirmDeleteEmployee, this);
-	},
-	onConfirmDeleteEmployee: function (btn) {
-		if (btn === 'yes') {
-			var vals = this.getComponent('employeeForm').getValues();
-			var msg = String.format(this.msgs.deletingEmployee, vals.lastName, vals.firstName);
-			Ext.getBody().mask(msg, 'x-mask-loading');
-			Ext.Ajax.request({
-				url: '/api/employee/delete',
-				callback: this.workspace.onAfterAjaxReq,
-				succCallback: this.onAfterDeleteEmployee,
-				params: {
-					id: vals.id
+			tbar: [ '站点信息', '->', {
+				text: '保存',
+				iconCls: 'icon-table_save',
+				scope: this,
+				handler: this.onSaveSiteRecord,
+			}, {
+				text: '追加',
+				iconCls: 'icon-world_add',
+				scope: this,
+				handler: function () {
+					delete this.rowIndexCtxMenu;
+					this.onInsertSiteRecord();
 				},
-				scope: this
+			}],
+			listeners: {
+				scope: this,
+				click: this.onSiteListClick,
+				rowcontextmenu: this.onSiteCtxMenu,
+				destroy: function (thisComponent) {
+					if (thisComponent.rowCtxMenu)
+						thisComponent.rowCtxMenu.destroy();
+				},
+			}
+		};
+	},
+	buildCostListView: function () {
+		return {
+			region: 'north',
+			xtype: 'costlist',
+			id: 'costList',
+			height: 300,
+			border: false,
+			style: 'border-right: 1px solid #99BBE8;',
+			tbar: [ '距离费用信息', '->', {
+				text: '保存',
+				iconCls: 'icon-table_save',
+				scope: this,
+				handler: this.onSaveCostRecord,
+			}, {
+				text: '追加',
+				iconCls: 'icon-world_add',
+				scope: this,
+				handler: function () {
+					delete this.rowIndexCtxMenu;
+					this.onInsertCostRecord();
+				},
+			}],
+			listeners: {
+				scope: this,
+				rowcontextmenu: this.onCostCtxMenu,
+				destroy: function (thisComponent) {
+					if (thisComponent.rowCtxMenu)
+						thisComponent.rowCtxMenu.destroy();
+				},
+			}
+		};
+	},
+	buildOrderListView: function () {
+		return {
+			region: 'center',
+			xtype: 'orderlist',
+			id: 'orderList',
+			border: false,
+			style: 'border-right: 1px solid #99BBE8;',
+			tbar: [ '订单信息', '->', {
+				text: '保存',
+				iconCls: 'icon-table_save',
+				scope: this,
+				handler: this.onSaveOrderRecord,
+			}, {
+				text: '追加',
+				iconCls: 'icon-world_add',
+				scope: this,
+				handler: function () {
+					delete this.rowIndexCtxMenu;
+					this.onInsertOrderRecord();
+				},
+			}],
+			listeners: {
+				scope: this,
+				rowcontextmenu: this.onOrderCtxMenu,
+				destroy: function (thisComponent) {
+					if (thisComponent.rowCtxMenu)
+						thisComponent.rowCtxMenu.destroy();
+				},
+			}
+		};
+	},
+	onSiteListClick: function () {
+		var siteList = Ext.getCmp('siteList');
+		var selectedSite = siteList.getSelected();
+		var costList = Ext.getCmp('costList');
+		var orderList = Ext.getCmp('orderList');
+
+		if (selectedSite.get('code') !== (costList.site || '')) {
+			costList.setNameMap(siteList.buildNameMap());
+			costList.loadStoreByParams({
+				phantom: selectedSite.phantom,
+				site: selectedSite.get('code')
+			});
+		}
+
+		if (selectedSite.get('code') !== (orderList.site || '')) {
+			orderList.setNameMap(siteList.buildNameMap());
+			orderList.loadStoreByParams({
+				phantom: selectedSite.phantom,
+				site: selectedSite.get('code')
 			});
 		}
 	},
-	onAfterDeleteEmployee: function (jsonData) {
-		var msg,
-			selectedEmployee = this.getComponent('employeeList').getSelected();
-		if (jsonData.success === true) {
-			msg = String.format(this.msgs.deleteEmpSuccess, selectedEmployee.get('lastName'), selectedEmployee.get('firstName'));
-			Ext.MessageBox.alert('Success', msg);
-			selectedEmployee.store.remove(selectedEmployee);
-			this.getComponent('employeeForm').clearForm();
-		} else {
-			msg = String.format(this.msgs.deleteEmpFaulure, selectedEmployee.get('lastName'), selectedEmployee.get('firstName'));
-			Ext.MessageBox.alert('Error', msg);
-		}
-		this.clearMask();
-	},
-	onSaveEmployee: function (employeeForm, vals) {
-		if (employeeForm.getForm().isValid()) {
-			var msg = String.format(this.msgs.saving, vals.lastName, vals.firstName);
-			Ext.getBody().mask(msg, 'x-mask-loading');
-			employeeForm.getForm().submit({
-				url: '/api/employee/save',
-				success: this.onEmployFormSaveSuccess,
-				failure: this.onEmployFormSaveFailure,
-				scope: this
-			});
-		} else {
-			Ext.MessageBox.alert('Error', this.msgs.errorsInForm);
-		}
-	},
-	onEmployFormSaveSuccess: function (form, action) {
-		var record = this.getComponent('employeeList').getSelected();
-		var vals = form.getValues();
-		var msg = String.format(this.msgs.empSavedSuccess, vals.lastName, vals.firstName);
-		if (record) {
-			record.set('lastName', vals.lastName);
-			record.set('firstName', vals.firstName);
-			record.commit();
-		} else {
-			var resultData = action.result.data;
-			this.getComponent('employeeList').createAndSelectRecord(resultData);
-			this.getComponent('employeeForm').setValues(resultData);
-		}
-		Ext.MessageBox.alert('Success', msg);
-		this.clearMask();
-	},
-	onEmployFormSaveFailure: function () {
-		this.clearMask();
-		Ext.MessageBox.alert('Error', this.msgs.errorSavingData);
-	},
-	prepareFormForNew: function (selectedDept) {
-		selectedDept = selectedDept || this.getComponent('departmentList').getSelected();
-		if (selectedDept) {
-			this.getComponent('employeeForm').setValues({
-				departmentId: selectedDept.get('id'),
-				dateHired: new Date()
+	onSiteCtxMenu: function (thisComponent, rowIndex, evtObj) {
+		evtObj.stopEvent();
+		this.rowIndexCtxMenu = rowIndex;
+
+		if (!thisComponent.rowCtxMenu) {
+			thisComponent.rowCtxMenu = new Ext.menu.Menu({
+				items: [{
+					text: '删除',
+					iconCls: 'icon-world_delete',
+					scope: this,
+					handler: this.onDeleteSiteRecord,
+				},{
+					text: '插入',
+					iconCls: 'icon-world_add',
+					scope: this,
+					handler: this.onInsertSiteRecord,
+				}],
 			});
 		}
+		thisComponent.rowCtxMenu.showAt(evtObj.getXY());
+	},
+	onSaveSiteRecord: function () {
+		var siteList = Ext.getCmp('siteList');
+		siteList.getStore().save();
+		siteList.refreshView();
+	},
+	onInsertSiteRecord: function () {
+		var siteList = Ext.getCmp('siteList');
+		var store = siteList.getStore();
+		var newRecord = new store.recordType({
+			newRecordId: Ext.id()
+		});
+		var selectedRowIndex = this.rowIndexCtxMenu || siteList.getSelectedRowIndex() || 0;
+		store.insert(selectedRowIndex, newRecord);
+		siteList.getView().startEditing(selectedRowIndex, 0);
+	},
+	onDeleteSiteRecord: function () {
+		var rowIndexCtxMenu = this.rowIndexCtxMenu;
+		Ext.MessageBox.confirm('系统提示', '确定要删除吗？', function (btn) {
+			if (btn == 'yes') {
+				//console.log(rowIndexCtxMenu);
+				var store = Ext.getCmp('siteList').getStore();
+				store.remove(store.getAt(rowIndexCtxMenu));
+				//siteList.getStore().save();
+			}
+		});
+	},
+	onCostCtxMenu: function (thisComponent, rowIndex, evtObj) {
+		evtObj.stopEvent();
+		this.rowIndexCtxMenu = rowIndex;
+
+		if (!thisComponent.rowCtxMenu) {
+			thisComponent.rowCtxMenu = new Ext.menu.Menu({
+				items: [{
+					text: '删除',
+					iconCls: 'icon-world_delete',
+					scope: this,
+					handler: this.onDeleteCostRecord,
+				},{
+					text: '插入',
+					iconCls: 'icon-world_add',
+					scope: this,
+					handler: this.onInsertCostRecord,
+				}],
+			});
+		}
+		thisComponent.rowCtxMenu.showAt(evtObj.getXY());
+	},
+	onSaveCostRecord: function () {
+		var costList = Ext.getCmp('costList');
+		costList.getStore().save();
+		costList.refreshView();
+	},
+	onInsertCostRecord: function () {
+		var costList = Ext.getCmp('costList');
+		var store = costList.getStore();
+		var newRecord = new store.recordType({
+			newRecordId: Ext.id()
+		});
+		var selectedRowIndex = this.rowIndexCtxMenu || costList.getSelectedRowIndex() || 0;
+		store.insert(selectedRowIndex, newRecord);
+		costList.getView().startEditing(selectedRowIndex, 0);
+	},
+	onDeleteCostRecord: function () {
+		var rowIndexCtxMenu = this.rowIndexCtxMenu;
+		Ext.MessageBox.confirm('系统提示', '确定要删除吗？', function (btn) {
+			if (btn == 'yes') {
+				//console.log(rowIndexCtxMenu);
+				var store = Ext.getCmp('costList').getStore();
+				store.remove(store.getAt(rowIndexCtxMenu));
+				//costList.getStore().save();
+			}
+		});
+	},
+	onOrderCtxMenu: function (thisComponent, rowIndex, evtObj) {
+		evtObj.stopEvent();
+		this.rowIndexCtxMenu = rowIndex;
+
+		if (!thisComponent.rowCtxMenu) {
+			thisComponent.rowCtxMenu = new Ext.menu.Menu({
+				items: [{
+					text: '删除',
+					iconCls: 'icon-world_delete',
+					scope: this,
+					handler: this.onDeleteOrderRecord,
+				},{
+					text: '插入',
+					iconCls: 'icon-world_add',
+					scope: this,
+					handler: this.onInsertOrderRecord,
+				}],
+			});
+		}
+		thisComponent.rowCtxMenu.showAt(evtObj.getXY());
+	},
+	onSaveOrderRecord: function () {
+		var orderList = Ext.getCmp('orderList');
+		orderList.getStore().save();
+		orderList.refreshView();
+	},
+	onInsertOrderRecord: function () {
+		var orderList = Ext.getCmp('orderList');
+		var store = orderList.getStore();
+		var newRecord = new store.recordType({
+			newRecordId: Ext.id()
+		});
+		var selectedRowIndex = this.rowIndexCtxMenu || orderList.getSelectedRowIndex() || 0;
+		store.insert(selectedRowIndex, newRecord);
+		orderList.getView().startEditing(selectedRowIndex, 0);
+	},
+	onDeleteOrderRecord: function () {
+		var rowIndexCtxMenu = this.rowIndexCtxMenu;
+		Ext.MessageBox.confirm('系统提示', '确定要删除吗？', function (btn) {
+			if (btn == 'yes') {
+				//console.log(rowIndexCtxMenu);
+				var store = Ext.getCmp('orderList').getStore();
+				store.remove(store.getAt(rowIndexCtxMenu));
+				//orderList.getStore().save();
+			}
+		});
 	},
 	clearMask: function () {
 		Ext.getBody().unmask();
 	},
 	cleanSlate: function() {
-		this.getComponent('departmentList').refreshView();
-		this.getComponent('departmentList').clearView();
-		this.getComponent('employeeForm').clearForm();
+		Ext.getCmp('siteList').refreshView();
+		Ext.getCmp('costList').clearView();
+		Ext.getCmp('orderList').clearView();
 	}
 });
 Ext.reg('employeemanager', VrpSolver.EmployeeManager);
