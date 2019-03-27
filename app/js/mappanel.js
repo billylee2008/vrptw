@@ -87,6 +87,20 @@ VrpSolver.MapPanel = Ext.extend(Ext.Panel, {
 			this.getAddress(p, marker);
 		}
 	},
+	addCenterMarker: function (lng, lat, text) {
+		var point = new BMap.Point(lng, lat);
+		var k = 0;
+		var marker = new BMap.Marker(point, {
+			icon: new BMap.Icon(["http://api.map.baidu.com/img/markers.png"], new BMap.Size(23, 25), {
+				offset: new BMap.Size(13, 25),
+				imageOffset: new BMap.Size(0, 0 - ((k > 0) ? ((k != 11) ? (k - 1) : 11) : 10) * 25)
+			})
+		});
+
+		if (text)
+			this.addClickHandler(text, marker);
+		this.map.addOverlay(marker);
+	},
 	getAddress: function (p, marker) {
 		var data = this.store.getAt(p);
 		if (data.get('found')) {
