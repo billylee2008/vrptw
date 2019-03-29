@@ -1,24 +1,33 @@
 Ext.ns('LSH.listpanel');
 LSH.listpanel.ListPanelBaseCls = Ext.extend(Ext.Panel, {
 	layout: 'fit',
-	textFieldEditor: new Ext.form.TextField({
+	/*textFieldEditor: new Ext.form.TextField({
 		maxLength: 15,
-	}),
+	}),*/
+	textFieldEditor: {
+		xtype: 'textfield',
+		maxLength: 15,
+	},
 	numberFieldEditor: new Ext.form.NumberField({
 		allowDecimals: false,
 	}),
-	dateFieldEditor: new Ext.form.DateField({
-		//xtype: 'datefield',
-		format: 'Ymd',
-		submitFormat: 'Ymd',
-	}),
-	floatFieldEditor: new Ext.form.NumberField({
+	/*floatFieldEditor: new Ext.form.NumberField({
 		decimalPrecision: 10,
 		allowDecimals: true,
+	}),*/
+	floatFieldEditor: {
+		xtype: 'numberfield',
+		decimalPrecision: 10,
+		allowDecimals: true,
+	},
+	dateFieldEditor: new Ext.form.DateField({
+		//xtype: 'datefield',
+		format: 'Y-m-d',
+		submitFormat: 'Y-m-d',
 	}),
 	initComponent: function () {
 		Date.prototype.toString = function () {
-			return this.format("Ymd");
+			return this.format("Y-m-d");
 		};
 		/*Ext.PagingToolbar.prototype.doRefresh = function () {
 			// Keep or remove these code
@@ -98,8 +107,11 @@ LSH.listpanel.ListPanelBaseCls = Ext.extend(Ext.Panel, {
 	},
 	refreshView: function () {
 		//this.getView().getBottomToolbar().readPage(0);
-		this.getView().getBottomToolbar().moveLast();
-		this.getView().getBottomToolbar().moveFirst();
+		//this.getView().getBottomToolbar().moveLast();
+		this.getView().getBottomToolbar().getPageData();
+		this.getStore().reload();
+		console.log(this.getView().getBottomToolbar());
+		//this.getView().getBottomToolbar().store().reload();
 	},
 	selectById: function (id) {
 		var view = this.getView();
@@ -120,6 +132,24 @@ LSH.listpanel.ListPanelBaseCls = Ext.extend(Ext.Panel, {
 	},
 	setNameMap: function (nameMap) {
 		this.nameMap = nameMap;
+	},
+	findNameMapById: function (id) {
+		id = id || false;
+		var name;
+		if (id)
+			name = this.nameMap['s' + id];
+		return name || ['','',-1];
+	},
+	findNameMapByCode: function (code) {
+		code = code || false;
+		if (code) {
+			for (var key in this.nameMap) {
+				var name = this.nameMap[key];
+				if (name[0] === code)
+					return name;
+			}
+		}
+		return ['','',-1];
 	},
 	addListeners: function () {
 		this.getView().on('beforeedit', this.checkEditable, this)
