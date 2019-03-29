@@ -21,10 +21,9 @@ VrpSolver.workspace = function () {
 				}
 			});
 
-			console.log("init:2:loginCookie");
-			console.log(cookieUtil.get('loginCookie'));
-			cookieUtil.clear('loginCookie');
-			if (!cookieUtil.get('loginCookie')) {
+			cookieUtil.clear('token');
+			var token = cookieUtil.get('token') || '';
+			if (cookieUtil.get('token') === '' || true) {
 				if (!loginWindow)
 					loginWindow = this.buildLoginWindow();
 				loginWindow.show();
@@ -34,7 +33,7 @@ VrpSolver.workspace = function () {
 		},
 		buildLoginWindow: function() {
 			return new LSH.window.UserLoginWindow({
-				title: 'Login to Department Manager',
+				title: '系统登陆',
 				handler: this.onLogin,
 				scope: this
 			});
@@ -94,47 +93,42 @@ VrpSolver.workspace = function () {
 		onLogin: function () {
 			var form = loginWindow.get(0);
 			if (form.getForm().isValid()) {
-				loginWindow.el.mask('Please wait...', 'x-mask-loading');
+				loginWindow.el.mask('登陆中...', 'x-mask-loading');
 				form.getForm().submit({
-					//success: this.onLoginSuccess,
-					success: function (form, action) {
-						this.onLoginSuccess(form, action);
-					},
-					failure: function (form, action) {
-						this.onLoginFailure();
-					},
-					scope: VrpSolver.workspace
+					scope: this,
+					success: this.onLoginSuccess,
+					failure: this.onLoginFailure,
+					//scope: VrpSolver.workspace
 				});
 			}
 		},
 		onLoginSuccess: function (form, action) {
 			loginWindow.el.unmask();
 			if (action.result.data) {
-				cookieUtil.set('loginCookie', action.result.data);
-				console.log(cookieUtil.get('loginCookie'));
+				var data = action.result.data;
+				cookieUtil.set('user', data[0]);
+				cookieUtil.set('token', data[1]);
 				this.buildViewport();
 				loginWindow.destroy();
 				loginWindow = null;
 			} else {
-				console.log("onLoginSuccess:: onLoginFailure");
 				this.onLoginFailure();
 			}
 		},
 		onLoginFailure: function () {
 			loginWindow.el.unmask();
-			Ext.MessageBox.alert('Failure', 'Login failed. Please try again.');
+			Ext.MessageBox.alert('系统提示', '登陆失败，请重试！');
 		},
 		onLogout: function () {
-			Ext.MessageBox.confirm('Please confirm', 'Are you sure you want to log out?', function (btn) {
+			Ext.MessageBox.confirm('系统提示', '确定要退出系统吗？', function (btn) {
 				if (btn === 'yes')
 					this.doLogout();
 			}, this);
 		},
 		doLogout: function () {
-			Ext.getBody().mask('Loggingout...', 'x-mask-loading');
+			Ext.getBody().mask('系统退出中...', 'x-mask-loading');
 			Ext.Ajax.request({
-				url: '/api/logout',
-				params: { user: cookieUtil.get('loginCookie') },
+				url: '/api/vrp/logout',
 				callback: this.onAfterAjaxReq,
 				succCallback: this.onAfterLogout,
 				scope: this
@@ -142,7 +136,7 @@ VrpSolver.workspace = function () {
 		},
 		onAfterLogout: function (jsonData) {
 			console.log("onAfterLogout");
-			cookieUtil.clear('loginCookie');
+			cookieUtil.clear('token');
 			this.destroy();
 		},
 		onSwitchPanel: function (btn) {

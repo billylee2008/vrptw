@@ -17,7 +17,7 @@ LSH.window.UserLoginWindow = Ext.extend(Ext.Window, {
 	buildForm: function () {
 		//表单
 		return new Ext.form.FormPanel({
-			url: '/api/login',
+			url: '/api/vrp/login',
 			labelAlign: 'right',
 			labelWidth: 50,
 			frame: true,
@@ -41,9 +41,9 @@ LSH.window.UserLoginWindow = Ext.extend(Ext.Window, {
 				name: 'password'
 			}],
 			buttons: [{
-				text: 'Login',
+				text: '登　陆',
+				scope: this.scope,
 				handler: this.handler,
-				//scope: this
 			}]
 		});
 	}

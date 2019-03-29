@@ -279,7 +279,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 						else if (!form.isDirty())
 							Ext.getCmp('frmVehicle').hide();
 						else {
-							Ext.getBody().mask('Saving...', 'x-mask-loading');
+							Ext.getBody().mask('数据保存中...', 'x-mask-loading');
 							form.submit({
 								scope: this,
 								success: function () {
