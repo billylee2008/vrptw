@@ -80,10 +80,10 @@ LSH.listpanel.SiteListView = Ext.extend(LSH.listpanel.ListPanelBaseCls, {
 	buildProxy: function () {
 		return new Ext.data.HttpProxy({
 			api: {
-				read: '/api/site/doQuery',
-				create: '/api/site/doCreate',
-				update: '/api/site/doUpdate',
-				destroy: '/api/site/doDelete',
+				read: '/api/vrp/site/doQuery',
+				create: '/api/vrp/site/doCreate',
+				update: '/api/vrp/site/doUpdate',
+				destroy: '/api/vrp/site/doDelete',
 			},
 		});
 	},
@@ -94,7 +94,11 @@ LSH.listpanel.SiteListView = Ext.extend(LSH.listpanel.ListPanelBaseCls, {
 			var store = this.getStore();
 
 			for (var i = 0; i < store.getCount(); i++)
-				nameMap['s' + store.getAt(i).get('code')] = store.getAt(i).get('name');
+				nameMap['s' + store.getAt(i).get('id')] = [
+					store.getAt(i).get('code'),
+					store.getAt(i).get('name'),
+					store.getAt(i).get('id')
+				];
 			this.nameMap = nameMap;
 		}
 		return this.nameMap;

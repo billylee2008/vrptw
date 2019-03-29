@@ -1,6 +1,6 @@
 Ext.ns('VrpSolver');
 VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
-	url: '/api/order/getAllByDldateAndDc',
+	url: '/api/vrp/order/getAllByDldateAndDc',
 	border: false,
 	layout: {
 		type: 'hbox',
@@ -74,6 +74,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				items: [{
 					xtype: 'form',
 					flex: 1,
+					layout: 'fit',
 					border: false,
 					buttonAlign: 'center',
 					buttons: [{
@@ -82,7 +83,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 						id: 'dateButton',
 						menu: {
 							xtype: 'datemenu',
-							format: 'Ymd',
+							format: 'Y-m-d',
 							scope: this,
 							handler: this.onSelectDeliveryDate
 						}
@@ -90,6 +91,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				}, {
 					xtype: 'form',
 					width: 100,
+					//width: .5,
+					layout: 'fit',
 					border: false,
 					buttonAlign: 'center',
 					buttons: [{
@@ -124,7 +127,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			}, {
 				flex: 1,
 				border: false,
-				tbar: [ '当日订单', '->', {
+				tbar: [ '当日订单', '', '->', {
 					//text: '获取',
 					tooltip: '获取当日订单',
 					iconCls: 'icon-cart_put',
@@ -179,7 +182,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				single: true,
 				fn: function () {
 					form.items.items[0].getForm().load({
-						url: '/api/vehicle/all',
+						url: '/api/vrp/vehicle/get',
 						scope: this,
 						success: function (form, action) {
 							this.params.vehicle = form.getValues();
@@ -208,7 +211,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			animCollapse: true,
 			items : {
 				xtype: 'form',
-				url: '/api/vehicle/put',
+				url: '/api/vrp/vehicle/put',
 				trackResetOnLoad: true,
 				labelAlign: 'right',
 				labelWidth: 140,
@@ -370,11 +373,19 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		//console.log(route);
 
 		Ext.getBody().mask('方案生成中...', 'x-mask-loading');
+		if (this.params.vehicle) {
+			this.params.siteLoad = this.params.vehicle.pickup;
+			this.params.siteUnload = this.params.vehicle.unload;
+			this.params.runLimit = this.params.vehicle.runlimit;
+		}
 		Ext.Ajax.request({
-			url: '/api/order/planRouteBySites',
+			url: '/api/vrp/route/planRouteBySites',
 			params: {
 				dldate: this.params.dldate,
 				dc: this.params.dc,
+				siteLoad: this.params.pickup,
+				siteUnload: this.params.unload,
+				runLimit: this.params.runlimit,
 				orderSites: route
 			},
 			callback: this.workspace.onAfterAjaxReq,
@@ -434,9 +445,9 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	onClickSiteButton: function (btn) {
 		if (btn.menu.items.items[0].xtype === 'menutextitem') {
 			var store = new Ext.data.JsonStore({
-				url: '/api/site/getCenterSites',
+				url: '/api/vrp/site/getCenterSites',
 				root: 'data',
-				fields: [ 'name', 'code', 'abbr', 'longitude', 'latitude' ]
+				fields: [ 'name', 'id', 'abbr', 'longitude', 'latitude' ]
 			});
 			store.addListener('load', function (store, records, options) {
 				for (var i = 0; i < store.getCount(); i++) {
@@ -445,7 +456,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 						lng: store.getAt(i).get('longitude'),
 						lat: store.getAt(i).get('latitude'),
 						text: store.getAt(i).get('abbr'),
-						siteId: store.getAt(i).get('code'),
+						siteId: store.getAt(i).get('id'),
 						btnText: store.getAt(i).get('abbr')
 					}));
 				}
@@ -708,7 +719,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	},
 	buildTotalStatusStore: function () {
 		var store = new Ext.data.JsonStore({
-			url: '/api/cost/getTotalCost',
+			url: '/api/vrp/cost/getTotalCost',
 			root: 'data',
 			fields: [ 'text', 'sites', 'load', 'volumn', 'minutes', 'tariff' ]
 		});
@@ -750,7 +761,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 
 		Ext.getBody().mask('方案生成中...', 'x-mask-loading');
 		Ext.Ajax.request({
-			url: '/api/cost/saveRoutes',
+			url: '/api/vrp/cost/saveRoutes',
 			params: {
 				routes: routes
 			},
@@ -775,7 +786,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	},
 	/*buildSaveRouteStore: function () {
 		var store = new Ext.data.JsonStore({
-			url: '/api/cost/saveRoutes',
+			url: '/api/vrp/cost/saveRoutes',
 			root: 'data',
 			fields: [ 'text', 'sites', 'load', 'volumn', 'minutes', 'tariff' ]
 		});
@@ -790,8 +801,11 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		node.select();
 		this.params.view = 'routePanel';
 		evtObj.stopEvent();
+		var center = false;
 		if ((node.attributes.site || '') === this.params.dc)
-			return;
+			center = true;
+		//if (center)
+		//	return;
 
 		if (!this.ctxMenuRoute)
 			this.ctxMenuRoute = this.buildCtxMenuRoute();
@@ -810,7 +824,10 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			renameItem.disable();
 			deleteItem.disable();
 			checkItem.setChecked(!node.draggable);
-			checkItem.enable();
+			if (center)
+				checkItem.disable();
+			else
+				checkItem.enable();
 			if (!node.draggable)
 				removeItem.disable();
 			else
@@ -924,6 +941,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		for (var i = selectedNode.childNodes.length - 1; i > 0; i--) {
 			var child = selectedNode.childNodes[i];
 			child.ui.rendered = false;
+			child.draggable = true;
 			selectedNode.removeChild(child);
 			if (isFirst) {
 				isFirst = false;
@@ -970,7 +988,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 	},
 	buildRouteStatusStore: function () {
 		var store = new Ext.data.JsonStore({
-			url: '/api/cost/getRouteCost',
+			url: '/api/vrp/cost/getRouteCost',
 			root: 'data',
 			fields: [ 'id', 'site1', 'site2', 'minutes', 'tariff' ]
 		});
@@ -1056,7 +1074,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		//console.log(route);
 		Ext.getBody().mask('线路优化中...', 'x-mask-loading');
 		Ext.Ajax.request({
-			url: '/api/order/optRoute',
+			url: '/api/vrp/route/optRoute',
 			params: {
 				route: route,
 				mode: menuItem.itemId
@@ -1249,11 +1267,13 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		orderLoader.load(this.getOrderPanel().root, function () {
 			var view = this.getOrderPanel();
 			var count = view.root.childNodes.length;
-			var title = view.topToolbar.getComponent(0).autoEl.html;
+			/*var title = view.topToolbar.getComponent(0).autoEl.html;
 			title = title.substring(0, 4);
 			if (count > 0)
 				title = title + "(" + count + ")";
-			view.topToolbar.getComponent(0).setText(title);
+			view.topToolbar.getComponent(0).setText(title);*/
+			var title = String.format('({0}件)', count);
+			view.topToolbar.getComponent(1).setText(title);
 			this.clearRoute();
 			view.root.setText(this.params.dcText);
 			Ext.getBody().unmask();
@@ -1311,7 +1331,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			downForm.id = 'downForm';
 			downForm.name = 'downForm';
 			downForm.className = 'x-hidden';
-			downForm.action = '/api/route/download';
+			downForm.action = '/api/vrp/route/download';
 			downForm.method = 'post';
 			var data = document.createElement('input');
 			data.type = 'hidden';

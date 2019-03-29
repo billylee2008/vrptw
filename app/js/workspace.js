@@ -48,7 +48,7 @@ VrpSolver.workspace = function () {
 				items: [{
 					xtype: 'routemanager'
 				}, {
-					xtype: 'employeemanager'
+					xtype: 'mastermanager'
 				}, {
 					xtype: 'dashboard'
 				}],
@@ -65,7 +65,7 @@ VrpSolver.workspace = function () {
 					text: '基础数据',
 					//iconCls: 'icon-user_edit',
 					iconCls: 'icon-script_gear',
-					itemType: 'employeemanager',
+					itemType: 'mastermanager',
 					toggleGroup: 'navGrp',
 					enableToggle: true,
 					handler: this.onSwitchPanel,
