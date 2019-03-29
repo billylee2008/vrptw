@@ -997,7 +997,7 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			for (var i = 0; i < store.getCount(); i++) {
 				rawData.push({
 					text: options.sites[i].text,
-					//po: options.sites[i].po || '',
+					po: options.sites[i].po || '',
 					load: options.sites[i].load || 0,
 					volumn: options.sites[i].volumn || 0,
 					cost: store.getAt(i).get('minutes')

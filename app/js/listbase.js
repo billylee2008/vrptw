@@ -108,9 +108,9 @@ LSH.listpanel.ListPanelBaseCls = Ext.extend(Ext.Panel, {
 	refreshView: function () {
 		//this.getView().getBottomToolbar().readPage(0);
 		//this.getView().getBottomToolbar().moveLast();
+		this.getStore().load();
 		this.getView().getBottomToolbar().getPageData();
 		this.getStore().reload();
-		console.log(this.getView().getBottomToolbar());
 		//this.getView().getBottomToolbar().store().reload();
 	},
 	selectById: function (id) {
