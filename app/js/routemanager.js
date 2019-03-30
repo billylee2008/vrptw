@@ -373,19 +373,21 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		//console.log(route);
 
 		Ext.getBody().mask('方案生成中...', 'x-mask-loading');
+		var siteLoad, siteUnload, runLimit;
 		if (this.params.vehicle) {
-			this.params.siteLoad = this.params.vehicle.pickup;
-			this.params.siteUnload = this.params.vehicle.unload;
-			this.params.runLimit = this.params.vehicle.runlimit;
+			siteLoad = this.params.vehicle.pickup;
+			siteUnload = this.params.vehicle.unload;
+			runLimit = this.params.vehicle.runlimit;
 		}
 		Ext.Ajax.request({
 			url: '/api/vrp/route/planRouteBySites',
+			scope: this,
 			params: {
 				dldate: this.params.dldate,
 				dc: this.params.dc,
-				siteLoad: this.params.pickup,
-				siteUnload: this.params.unload,
-				runLimit: this.params.runlimit,
+				siteLoad: siteLoad,
+				siteUnload: siteUnload,
+				runLimit: runLimit,
 				orderSites: route
 			},
 			callback: this.workspace.onAfterAjaxReq,
@@ -405,7 +407,6 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 					minWidth: 200
 				});
 			},
-			scope: this
 		});
 	},
 	planRoutes: function (data) {
@@ -704,15 +705,16 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 		if (!this.totalStatusStore)
 			this.totalStatusStore = this.buildTotalStatusStore();
 		Ext.getBody().mask('计算中...', 'x-mask-loading');
+		var siteLoad, siteUnload;
 		if (this.params.vehicle) {
-			this.params.siteLoad = this.params.vehicle.pickup;
-			this.params.siteUnload = this.params.vehicle.unload;
+			siteLoad = this.params.vehicle.pickup;
+			siteUnload = this.params.vehicle.unload;
 		}
 		this.totalStatusStore.load({
 			sites: sites,
 			params: {
-				siteLoad: this.params.siteLoad || 0,
-				siteUnload: this.params.siteUnload || 20,
+				siteLoad: siteLoad || 0,
+				siteUnload: siteUnload || 0,
 				routes: routes
 			}
 		}, this);
@@ -904,13 +906,13 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				handler: this.onDrawMapMenu
 			}, '-', {
 				itemId: 'opt2',
-				text: '2-OPT',
+				text: '快速优化',
 				iconCls: 'icon-arrow_refresh',
 				scope: this,
 				handler: this.onOptRouteMenu
 			}, {
 				itemId: 'opt3',
-				text: '3-OPT',
+				text: '深度优化',
 				iconCls: 'icon-arrow_in',
 				scope: this,
 				handler: this.onOptRouteMenu
@@ -992,6 +994,11 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 			root: 'data',
 			fields: [ 'id', 'site1', 'site2', 'minutes', 'tariff' ]
 		});
+		var siteLoad, siteUnload;
+		if (this.params.vehicle) {
+			siteLoad = this.params.vehicle.pickup;
+			siteUnload = this.params.vehicle.unload;
+		}
 		store.addListener('load', function (store, records, options) {
 			var rawData = [];
 			for (var i = 0; i < store.getCount(); i++) {
@@ -1009,8 +1016,8 @@ VrpSolver.RouteManager = Ext.extend(Ext.Panel, {
 				this.params.siteUnload = this.params.vehicle.unload;
 			}
 			this.showRouteStatus('routesitelist', rawData, options.text, {
-				siteLoad: this.params.siteLoad || 0,
-				siteUnload: this.params.siteUnload || 20
+				siteLoad: siteLoad || 0,
+				siteUnload: siteUnload || 0
 			});
 		}, this);
 		return store;
