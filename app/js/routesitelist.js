@@ -66,16 +66,16 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 			record = [];
 			record[0] = rawData[i].text;
 			record[10] = rawData[i].cost;
-			totalLoad += rawData[i].load;
-			totalVolumn += rawData[i].volumn;
+			totalLoad -= (0 - rawData[i].load);
+			totalVolumn -= (0 - rawData[i].volumn);
 
 			if (i === 0) {
 				record[1] = -1;
-				record[6] = this.formatTime(btime);
+				record[6] = this.formatCost(btime);
 				record[7] = this.siteLoad;
-				btime += record[7];
-				record[9] = this.formatTime(btime);
-				btime += record[10];
+				btime -= (0 - record[7]);
+				record[9] = this.formatCost(btime);
+				btime -= (0 - record[10]);
 			} else {
 				lastRecord[8] = record[0];
 				record[1] = 0;
@@ -83,11 +83,11 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 				record[3] = lastRecord[9];
 				record[4] = lastRecord[10];
 				record[5] = rawData[i].po || ('PO' + i);
-				record[6] = this.formatTime(btime);
+				record[6] = this.formatCost(btime);
 				record[7] = this.siteUnload;
-				btime += record[7];
-				record[9] = this.formatTime(btime);
-				btime += record[10];
+				btime -= (0 - record[7]);
+				record[9] = this.formatCost(btime);
+				btime -= (0 - record[10]);
 			}
 			lastRecord = record;
 			arrayData.push(record);
@@ -100,7 +100,7 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 		record[2] = lastRecord[0];
 		record[3] = lastRecord[9];
 		record[4] = lastRecord[10];
-		record[6] = this.formatTime(btime);
+		record[6] = this.formatCost(btime);
 		record[7] = 0;
 		arrayData.push(record);
 		lastRecord = record;
@@ -108,8 +108,8 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 		record = [];
 		record[0] = this.text || '本线路';
 		record[1] = 9;
-		//record[6] = lastRecord[6];
-		record[6] = this.formatTime(btime, true);
+		record[6] = lastRecord[6];
+		record[6] = this.formatTwoCost(btime);
 		record[4] = this.formatDecimal(totalVolumn, 3, true);
 		record[10] = this.formatDecimal(totalLoad, 3, true);
 		arrayData[0] = record;
@@ -125,15 +125,15 @@ LSH.form.RouteSiteList = Ext.extend(Ext.DataView, {
 		});
 		return arrayStore;
 	},
-	formatTime: function (totalMinutes, twoParts) {
-		twoParts = twoParts || false;
+	formatCost: function (btime) {
+		var totalMinutes = btime;
 		var hours = '00' + Math.floor(totalMinutes / 60);
 		var minutes = '00' + (totalMinutes - hours * 60);
-
-		var msg = '';
-		if (twoParts)
-			msg = String.format('({0})', totalMinutes);
-		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2) + msg;
+		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2);
+	},
+	formatTwoCost: function (totalMinutes) {
+		var btime2 = totalMinutes;
+		return '' + this.formatCost(btime2) + '(' + btime2 + ')';
 	},
 	formatDecimal: function (decimal, digits, full, fn) {
 		digits = digits || 0;

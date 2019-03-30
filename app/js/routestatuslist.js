@@ -62,16 +62,16 @@ LSH.form.RouteStatusList = Ext.extend(Ext.DataView, {
 
 			if (rawData[i].costTime < 0) {
 				record[1] = -1;
-				record[5] = this.formatTime(0);
+				record[5] = this.formatCost(0);
 				record[6] = this.formatDecimal(0, 3, true);
 			} else {
-				record[5] = this.formatTime(rawData[i].costTime);
+				record[5] = this.formatCost(rawData[i].costTime);
 				record[6] = this.formatDecimal(rawData[i].costFee, 3, true);
-				totalSites += rawData[i].sites;
-				totalVolumn += rawData[i].volumn;
-				totalLoad += rawData[i].load;
-				totalMinutes += rawData[i].costTime;
-				totalTariff += rawData[i].costFee;
+				totalSites -= (0 - rawData[i].sites);
+				totalVolumn -= (0 - rawData[i].volumn);
+				totalLoad -= (0 - rawData[i].load);
+				totalMinutes -= (0 - rawData[i].costTime);
+				totalTariff -= (0 - rawData[i].costFee);
 			}
 
 			arrayData.push(record);
@@ -83,7 +83,7 @@ LSH.form.RouteStatusList = Ext.extend(Ext.DataView, {
 		record[2] = totalSites;
 		record[3] = this.formatDecimal(totalVolumn, 3, true);
 		record[4] = this.formatDecimal(totalLoad, 3, true);
-		record[5] = this.formatTime(totalMinutes);
+		record[5] = this.formatCost(totalMinutes);
 		record[6] = this.formatDecimal(totalTariff, 3, true);
 		arrayData[0] = record;
 
@@ -98,7 +98,7 @@ LSH.form.RouteStatusList = Ext.extend(Ext.DataView, {
 		});
 		return arrayStore;
 	},
-	formatTime: function (totalMinutes) {
+	formatCost: function (totalMinutes) {
 		var hours = '00' + Math.floor(totalMinutes / 60);
 		var minutes = '00' + (totalMinutes - hours * 60);
 		return hours.substr(hours.length - 2) + ':' + minutes.substr(minutes.length - 2) + '(' + totalMinutes + ')';
